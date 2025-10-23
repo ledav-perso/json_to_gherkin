@@ -1,0 +1,1512 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Geocaptcha API",
+    "version": "0.1.0",
+    "description": "Geographic based captcha API",
+    "license": {
+      "name": "Licensed Under MIT",
+      "url": "https://spdx.org/licenses/MIT.html"
+    },
+    "contact": {
+      "name": "MARS",
+      "url": "https://github.com/IGNF/GeocaptchaAPI",
+      "email": "mars@ign.fr"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local service"
+    },
+    {
+      "url": "https://geocaptcha-api.mut-dev.ign.fr/api/v1",
+      "description": "Development service"
+    },
+    {
+      "url": "https://qlf-geocaptcha.ign.fr/api/v1",
+      "description": "Qualification service"
+    },
+    {
+      "url": "https://geocaptcha.ign.fr/api/v1",
+      "description": "Production service"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "GEO CAPTCHA"
+        ],
+        "summary": "User guide",
+        "description": "User guide to integrate GEO CAPTCHA in your forms",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "text/html": {
+                "examples": {
+                  "geocaptcha user guide": {
+                    "value": "<html><body><title>GéoCaptcha - Démo</title>..."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/responses/ResponseError"
+                },
+                "examples": {
+                  "not found": {
+                    "value": {
+                      "msg": "user guide not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/lib.js": {
+      "get": {
+        "tags": [
+          "GEO CAPTCHA"
+        ],
+        "summary": "Get kingpin captcha",
+        "description": "Get kingpin geocaptcha resources (JS client libs, CSS, HTML...)",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "text/javascript": {
+                "examples": {
+                  "lib.js": {
+                    "value": "/* global API_ENDPOINT */\n\nwindow.geoCaptcha = {\n  captchas: [],\n  launch(opts) {\n    // TODO: lib is not loaded yet\n    // warn if lib not ready yet ?\n    // for now: store captchas ?\n    this.captchas.push({ opts });\n  },\n};\n\n// load JS\nlet script = document.createElement('script');\nscript.src = `${API_ENDPOINT}/captcha.js`;\nscript.async = true;\ndocument.head.appendChild(script);'\n"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/responses/ResponseError"
+                },
+                "examples": {
+                  "not found": {
+                    "value": {
+                      "msg": "javascript client lib not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/challenge": {
+      "get": {
+        "tags": [
+          "CHALLENGE API"
+        ],
+        "summary": "Get a new challenge",
+        "description": "Get a new challenge from [ Kingpin, Quiz ]",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "description": "Type of challenge to return",
+            "schema": {
+              "$ref": "#/components/schemas/ChallengeType"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "challenge created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "challengeId": {
+                      "type": "string",
+                      "description": "encrypted challenge token (A256CBC-HS512 algorithm)"
+                    }
+                  }
+                },
+                "examples": {
+                  "challenge token": {
+                    "value": {
+                      "challengeId": "eyJhbGciOiJkaXIiLCJ....."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/challenge/{challengeId}": {
+      "get": {
+        "tags": [
+          "CHALLENGE API"
+        ],
+        "summary": "Get resource challenge (WebP or JSON)",
+        "parameters": [
+          {
+            "name": "challengeId",
+            "in": "path",
+            "description": "The challenge ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "challenge resources",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary",
+                  "example": "buffer of WebP sprite"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "question": {
+                      "type": "string",
+                      "example": "quel nombre est avant 458 ?"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/challenge/{challengeId}/attempt": {
+      "get": {
+        "tags": [
+          "CHALLENGE API"
+        ],
+        "summary": "Attempt to resolve a challenge",
+        "description": "Attempt to resolve a challenge",
+        "parameters": [
+          {
+            "name": "challengeId",
+            "in": "path",
+            "description": "The challenge ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "description": "the challenge response",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ChallengeProposal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Challenge result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "result"
+                  ],
+                  "properties": {
+                    "result": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "examples": {
+                  "sucessfull_attempt": {
+                    "value": {
+                      "result": true,
+                      "msg": "first attempt"
+                    }
+                  },
+                  "failed_attempt": {
+                    "value": {
+                      "result": false,
+                      "msg": "first attempt"
+                    }
+                  },
+                  "too_much_time": {
+                    "value": {
+                      "result": false,
+                      "msg": "deadline exceeded"
+                    }
+                  },
+                  "too_much_attempt": {
+                    "value": {
+                      "result": false,
+                      "msg": "too much attempts"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/challenge/{challengeId}/validation": {
+      "get": {
+        "tags": [
+          "CHALLENGE API"
+        ],
+        "summary": "Validate a challenge attempt",
+        "description": "Validate a challenge attempt",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "challengeId",
+            "in": "path",
+            "description": "The challenge ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Challenge result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "captcha",
+                    "ip",
+                    "attempts",
+                    "available",
+                    "begin",
+                    "end"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "result of first session attempt (another ones are not saved)"
+                    },
+                    "captcha": {
+                      "$ref": "#/components/schemas/ChallengeType"
+                    },
+                    "ip": {
+                      "type": "string",
+                      "format": "ipv4",
+                      "description": "ip source of the last attempt"
+                    },
+                    "attempts": {
+                      "type": "number",
+                      "description": "number of attempts",
+                      "format": "int64",
+                      "minimum": 0
+                    },
+                    "available": {
+                      "type": "boolean",
+                      "description": "avaibility of current session, if false, something wrong has happened"
+                    },
+                    "begin": {
+                      "type": "string",
+                      "description": "beginning session timestamp",
+                      "format": "date-time"
+                    },
+                    "end": {
+                      "type": "string",
+                      "description": "end session timestamp",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "examples": {
+                  "successfull challenge": {
+                    "value": {
+                      "success": true,
+                      "captcha": "kinpin",
+                      "ip": "123.123.123.123",
+                      "attempts": 1,
+                      "available": false,
+                      "begin": "2020-05-12T23:50:21.817Z",
+                      "end": "2020-05-12T23:53:12.543Z"
+                    }
+                  },
+                  "challenge failed (bad response)": {
+                    "value": {
+                      "success": false,
+                      "captcha": "kinpin",
+                      "ip": "123.123.123.123",
+                      "attempts": 1,
+                      "available": false,
+                      "begin": "2020-05-12T23:50:21.817Z",
+                      "end": null
+                    }
+                  },
+                  "challenge failed (attempts > 1)": {
+                    "value": {
+                      "success": false,
+                      "captcha": "kinpin",
+                      "ip": "123.123.123.123",
+                      "attempts": 50,
+                      "available": false,
+                      "begin": "2020-05-12T23:50:21.817Z",
+                      "end": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "STATUS API"
+        ],
+        "summary": "application status",
+        "description": "application status: Endpoint, database and objects storage",
+        "responses": {
+          "200": {
+            "description": "Endpoint availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/cuser": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get all captcha users",
+        "description": "get all captcha users",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "firstObject",
+            "description": "index of first object (1 indexed array)",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "nbObjects",
+            "description": "number of objects to retrieve",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "cusers listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "captcha": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Cuser"
+                      }
+                    },
+                    "nbObjects": {
+                      "type": "integer",
+                      "description": "number of objects in listing",
+                      "example": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "Add / modify a captcha user",
+        "description": "Add / modify a captcha user",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "requestBody": {
+          "description": "captcha user information",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cuser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "captcha user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cuser"
+                },
+                "example": {
+                  "appId": "ApplicationClient1",
+                  "apiKey": "6Javx8H43UNlH2h9tmHjiLb3Xoxi4s_IVs059dfKw96IlJolXffusdhnrDuxAlBTn6J9qsvQqZmQLw7o2P2VBA",
+                  "email": "support@application-client1.eu",
+                  "referer": [
+                    "https://application-client1.eu/"
+                  ],
+                  "role": "private"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "Delete a captcha user",
+        "description": "Delete a captcha user",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "description": "The Id of the captcha user to delete",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "captcha user deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "description": "no captcha user found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msg": {
+                      "type": "string",
+                      "example": "user ApplicationClient1 not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/cuser/{appId}": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get a captcha user",
+        "description": "get a captcha user",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "description": "The captcha name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "captcha user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cuser": {
+                      "$ref": "#/components/schemas/Cuser",
+                      "example": {
+                        "appId": "ApplicationClient1",
+                        "apiKey": "6Javx8H43UNlH2h9tmHjiLb3Xoxi4s_IVs059dfKw96IlJolXffusdhnrDuxAlBTn6J9qsvQqZmQLw7o2P2VBA",
+                        "email": "support@application-client1.eu",
+                        "referer": [
+                          "https://application-client1.eu/"
+                        ],
+                        "role": "private"
+                      }
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "cuser ApplicationClient1 found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "description": "np captcha user found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msg": {
+                      "type": "string",
+                      "example": "user ApplicationClient1 not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "update a captcha user",
+        "description": "update a captcha user",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "requestBody": {
+          "description": "captcha user information",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cuser"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "description": "The captcha name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "captcha user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cuser": {
+                      "$ref": "#/components/schemas/Cuser",
+                      "example": {
+                        "appId": "ApplicationClient1",
+                        "apiKey": "6Javx8H43UNlH2h9tmHjiLb3Xoxi4s_IVs059dfKw96IlJolXffusdhnrDuxAlBTn6J9qsvQqZmQLw7o2P2VBA",
+                        "email": "support@application-client1.eu",
+                        "referer": [
+                          "https://application-client1.eu/"
+                        ],
+                        "role": "private"
+                      }
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "cuser ApplicationClient1 found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "description": "np captcha user found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msg": {
+                      "type": "string",
+                      "example": "user ApplicationClient1 not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/session": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get all sessions",
+        "description": "get all sessions",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "firstObject",
+            "description": "index of first object (1 indexed array)",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "nbObjects",
+            "description": "number of objects to retrieve",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "sessions listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "captcha": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Session"
+                      }
+                    },
+                    "nbObjects": {
+                      "type": "integer",
+                      "description": "number of objects in listing",
+                      "example": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/session/{sessionId}": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get the session document",
+        "description": "get the session document",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "The session ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                },
+                "example": {
+                  "captcha": {
+                    "type": "kingpin",
+                    "challenge": {
+                      "name": "28350-97424",
+                      "backendId": "28350-97424-backend.png",
+                      "frontendId": "28350-97424-frontend.png",
+                      "angle": 74
+                    }
+                  },
+                  "ip": "192.133.134.28",
+                  "success": false,
+                  "attempts": 0,
+                  "available": true,
+                  "begin": "2024-11-11T18:20:20.244Z",
+                  "end": "2020-05-12T23:53:12.543Z",
+                  "visited": false,
+                  "referer": "https://aplication-client1.ign.fr",
+                  "challengeId": "eyJhbGciOiJkaXIiLCJlb...."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "Delete a session",
+        "description": "Delete a session",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "MongoDB session ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "session deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "description": "no session found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msg": {
+                      "type": "string",
+                      "example": "session < session ID > not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/kingpin": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get all kingpin captchas pre-calculated",
+        "description": "get all pre-calculated challenges from captcha type : Kingpin",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "firstObject",
+            "description": "index of first object (1 indexed array)",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "nbObjects",
+            "description": "number of objects to retrieve",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "kingpins listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "captcha": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/KingpinCaptcha"
+                      }
+                    },
+                    "nbObjects": {
+                      "type": "integer",
+                      "description": "number of objects in listing",
+                      "example": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "Add a new kingpin captcha",
+        "description": "Add a new pre-calculated captcha of type Kingpin from TinderGeocaptcha",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "requestBody": {
+          "description": "exported tinder Geocaptcha",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TinderKingpin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful added"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/kingpin/{kingpinId}": {
+      "get": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "get a pre-calculated kingpin captcha",
+        "description": "get a pre-calculated kingpin captcha",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kingpinId",
+            "in": "path",
+            "required": true,
+            "description": "The captcha name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/schemas/KingpinCaptcha"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "Delete a pre-calculated captcha",
+        "description": "Delete a pre-calculated captcha",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kingpinId",
+            "in": "path",
+            "required": true,
+            "description": "The Id of the captcha to delete",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "captcha deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/admin/kingpin/{kingpinId}/deactivate": {
+      "post": {
+        "tags": [
+          "ADMIN API"
+        ],
+        "summary": "deactivate a kingpin captcha",
+        "description": "deactivate a kingpin captcha",
+        "security": [
+          {
+            "apiKey": [],
+            "appId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kingpinId",
+            "in": "path",
+            "required": true,
+            "description": "The captcha name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "captcha deactivated"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "appId": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-app-id"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "responses": {
+      "400": {
+        "description": "missing of malformed parameter",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "msg": {
+                  "type": "string",
+                  "example": "missing or malformed parameter"
+                }
+              }
+            }
+          }
+        }
+      },
+      "403": {
+        "description": "access forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "msg": {
+                  "type": "string",
+                  "example": "access forbidden"
+                }
+              }
+            }
+          }
+        }
+      },
+      "404": {
+        "description": "no data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "msg": {
+                  "type": "string",
+                  "example": "no data"
+                }
+              }
+            }
+          }
+        }
+      },
+      "500": {
+        "description": "internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "msg": {
+                  "type": "string",
+                  "example": "internal server error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ResponseError": {
+        "description": "api error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "msg": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ChallengeProposal": {
+        "type": "string",
+        "format": "byte",
+        "description": "base64 encoded proposal for challenge resolution"
+      },
+      "ChallengeType": {
+        "type": "string",
+        "enum": [
+          "kingpin",
+          "quiz"
+        ]
+      },
+      "Health": {
+        "type": "object",
+        "description": "Endpoint API status",
+        "required": [
+          "health",
+          "db",
+          "objects"
+        ],
+        "properties": {
+          "health": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "KO"
+            ],
+            "description": "service status"
+          },
+          "db": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "KO"
+            ],
+            "description": "database status"
+          },
+          "objects": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "KO"
+            ],
+            "description": "Objects storage status"
+          }
+        },
+        "example": {
+          "health": "OK",
+          "db": "OK",
+          "objects": "OK"
+        }
+      },
+      "Cuser": {
+        "type": "object",
+        "required": [
+          "appId",
+          "email",
+          "referer",
+          "role"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minimum": 5
+          },
+          "apiKey": {
+            "type": "string",
+            "minimum": 50
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "referer": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "private",
+              "admin"
+            ]
+          }
+        },
+        "example": {
+          "appId": "ApplicationClient1",
+          "email": "support@application-client1.eu",
+          "referer": [
+            "https://application-client1.eu/",
+            "https://autreapplication.fr"
+          ],
+          "role": "private"
+        }
+      },
+      "Session": {
+        "type": "object",
+        "required": [
+          "captcha",
+          "ip",
+          "success",
+          "attempts",
+          "available",
+          "begin",
+          "end",
+          "visited",
+          "referer",
+          "challengeId"
+        ],
+        "properties": {
+          "captcha": {
+            "type": "object",
+            "required": [
+              "type",
+              "challenge"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "$ref": "#/components/schemas/ChallengeType"
+              },
+              "challenge": {
+                "type": "string"
+              }
+            }
+          },
+          "ip": {
+            "type": "string",
+            "format": "ipv4",
+            "description": "ip source"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "result of first session attempt (another ones are not saved)"
+          },
+          "attempts": {
+            "type": "number",
+            "description": "number of attempts",
+            "format": "int64",
+            "minimum": 0
+          },
+          "available": {
+            "type": "boolean",
+            "description": "avaibility of current session, if false, something wrong has happened"
+          },
+          "begin": {
+            "type": "string",
+            "description": "session beginning timestamp",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "description": "session end timestamp",
+            "format": "date-time"
+          },
+          "visited": {
+            "type": "boolean",
+            "description": "the session has been visited by application"
+          },
+          "referer": {
+            "type": "string",
+            "format": "uri"
+          },
+          "challengeId": {
+            "type": "string",
+            "description": "encrypted challenge token (A256CBC-HS512 algorithm)"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "GEO CAPTCHA",
+      "description": "JS Client library"
+    },
+    {
+      "name": "CHALLENGE API",
+      "description": "Client API for GEO CAPTCHA"
+    },
+    {
+      "name": "STATUS API",
+      "description": "health status for API, DB and Object storage services"
+    },
+    {
+      "name": "ADMIN API",
+      "description": "GEO CAPTCHA Management API"
+    }
+  ]
+}
